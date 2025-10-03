@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5001"
+      - "4173:4173"
+    env_file:
+      - backend.node/.env
+    environment:
+      - FRONTEND_PORT=4173
+      - NODE_ENV=production
+    restart: unless-stopped
