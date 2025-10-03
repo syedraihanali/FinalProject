@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import './RegisterPage.css';
 import '../common.css';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 function RegisterPage() {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -27,7 +29,7 @@ function RegisterPage() {
 
   // Fetch the list of doctors from the backend when the component mounts
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/doctors`)
+    fetch(`${API_URL}/api/doctors`)
       .then((response) => {
         if (!response.ok) {
           throw new Error('Failed to fetch doctors');
@@ -100,7 +102,7 @@ function RegisterPage() {
       selectedDoctor: formData.selectedDoctor,
     };
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/register`, {
+    fetch(`${API_URL}/api/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

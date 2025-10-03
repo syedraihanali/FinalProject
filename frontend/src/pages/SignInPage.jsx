@@ -4,7 +4,9 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './SignInPage.css';
 import '../common.css';
-import { AuthContext } from '../AuthContext'; // Import AuthContext
+import { AuthContext } from '../AuthContext.jsx'; // Import AuthContext
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 function SignInPage() {
   const [formData, setFormData] = useState({
@@ -29,8 +31,6 @@ function SignInPage() {
 
     // Clear any previous error message
     setErrorMessage('');
-
-    const API_URL = process.env.REACT_APP_API_URL;
 
     // Send data to the backend for authentication
     fetch(`${API_URL}/api/signin`, {
