@@ -3,7 +3,7 @@
 
 ## Docker Setup
 
-This repository includes a Docker-based workflow that runs the backend API and the built frontend with a single command.
+This repository includes a Docker-based workflow that runs the backend API, a bundled MySQL-compatible database, and the built frontend with a single command.
 
 ### Prerequisites
 
@@ -23,4 +23,17 @@ This repository includes a Docker-based workflow that runs the backend API and t
    - Backend API: http://localhost:5001
    - Frontend UI: http://localhost:4173
 
-Environment variables for the backend are stored in `backend.node/.env`. Update this file if you need to target a different database host or change credentials. The Docker setup expects your MySQL instance to already be running and reachable at the host defined in that file.
+The container image now embeds a MariaDB instance that is automatically initialized with the `clinic` database schema and a dedicated application user. No external database service is required.
+
+### Default credentials
+
+The backend connects to the in-container database using the following defaults:
+
+| Variable      | Default        | Description                         |
+| ------------- | -------------- | ----------------------------------- |
+| `DB_HOST`     | `127.0.0.1`    | Internal database host              |
+| `DB_NAME`     | `clinic`       | Database name                       |
+| `DB_USER`     | `clinic_user`  | Database user created at start-up   |
+| `DB_PASSWORD` | `clinic_pass`  | Password for `clinic_user`          |
+
+Override these variables at container runtime if you need to supply different credentials.
