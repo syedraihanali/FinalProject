@@ -3,14 +3,15 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 import { AuthProvider } from './AuthContext'; // Import AuthProvider
-import { BrowserRouter } from 'react-router-dom';
+
+beforeEach(() => {
+  window.history.pushState({}, 'Test page', '/Capstone-Project/');
+});
 
 test('renders Healthcare made easy slogan', () => {
   render(
     <AuthProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <App />
     </AuthProvider>
   );
   const sloganElement = screen.getByText(/Healthcare made easy./i);
