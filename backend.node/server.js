@@ -52,6 +52,7 @@ app.use(bodyParser.json()); // Alternatively, use app.use(express.json());
 // Initialize MySQL database connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'clinic',
@@ -74,97 +75,115 @@ const executeQuery = async (query, params) => {
 };
 
 // Function to initialize the database schema
-const initializeDatabase = async () => {
-  try {
-    // Create doctors table
-    await executeQuery(
-      `CREATE TABLE IF NOT EXISTS doctors (
-        DoctorID INT PRIMARY KEY AUTO_INCREMENT,
-        FullName VARCHAR(255) NOT NULL,
-        MaxPatientNumber INT NOT NULL,
-        CurrentPatientNumber INT NOT NULL DEFAULT 0
-      )`
+const MAX_DB_INIT_RETRIES = Number(process.env.DB_INIT_RETRIES || 15);
+const DB_INIT_DELAY_MS = Number(process.env.DB_INIT_DELAY_MS || 2000);
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const seedDatabase = async () => {
+  // Create doctors table
+  await executeQuery(
+    `CREATE TABLE IF NOT EXISTS doctors (
+      DoctorID INT PRIMARY KEY AUTO_INCREMENT,
+      FullName VARCHAR(255) NOT NULL,
+      MaxPatientNumber INT NOT NULL,
+      CurrentPatientNumber INT NOT NULL DEFAULT 0
+    )`
+  );
+  console.log('Doctors table ready.');
+
+  // Insert initial doctors if table is empty
+  const doctorsCount = await executeQuery('SELECT COUNT(*) AS count FROM doctors');
+  if (doctorsCount[0].count === 0) {
+    const doctors = [
+      { FullName: 'Dr. John Smith', MaxPatientNumber: 100, CurrentPatientNumber: 0 },
+      { FullName: 'Dr. Emily Davis', MaxPatientNumber: 80, CurrentPatientNumber: 0 },
+      { FullName: 'Dr. Michael Brown', MaxPatientNumber: 120, CurrentPatientNumber: 0 },
+      // Add more doctors as needed
+    ];
+
+    const insertDoctorPromises = doctors.map((doc) =>
+      executeQuery(
+        'INSERT INTO doctors (FullName, MaxPatientNumber, CurrentPatientNumber) VALUES (?, ?, ?)',
+        [doc.FullName, doc.MaxPatientNumber, doc.CurrentPatientNumber]
+      )
     );
-    console.log('Doctors table ready.');
 
-    // Insert initial doctors if table is empty
-    const doctorsCount = await executeQuery('SELECT COUNT(*) AS count FROM doctors');
-    if (doctorsCount[0].count === 0) {
-      const doctors = [
-        { FullName: 'Dr. John Smith', MaxPatientNumber: 100, CurrentPatientNumber: 0 },
-        { FullName: 'Dr. Emily Davis', MaxPatientNumber: 80, CurrentPatientNumber: 0 },
-        { FullName: 'Dr. Michael Brown', MaxPatientNumber: 120, CurrentPatientNumber: 0 },
-        // Add more doctors as needed
-      ];
+    await Promise.all(insertDoctorPromises);
+    console.log('Initial doctors inserted.');
+  }
 
-      const insertDoctorPromises = doctors.map((doc) =>
-        executeQuery(
-          'INSERT INTO doctors (FullName, MaxPatientNumber, CurrentPatientNumber) VALUES (?, ?, ?)',
-          [doc.FullName, doc.MaxPatientNumber, doc.CurrentPatientNumber]
-        )
-      );
+  // Create patients table
+  await executeQuery(
+    `CREATE TABLE IF NOT EXISTS patients (
+      PatientID INT PRIMARY KEY AUTO_INCREMENT,
+      FullName VARCHAR(255) NOT NULL,
+      BirthDate DATE NOT NULL,
+      PhoneNumber VARCHAR(20) NOT NULL,
+      Email VARCHAR(255) NOT NULL UNIQUE,
+      Gender ENUM('Male', 'Female', 'Other') NOT NULL,
+      PasswordHash VARCHAR(255) NOT NULL,
+      Address VARCHAR(255) NOT NULL,
+      DoctorID INT NULL,
+      FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+    )`
+  );
+  console.log('Patients table ready.');
 
-      await Promise.all(insertDoctorPromises);
-      console.log('Initial doctors inserted.');
+  // Create available_time table
+  await executeQuery(
+    `CREATE TABLE IF NOT EXISTS available_time (
+      AvailableTimeID INT PRIMARY KEY AUTO_INCREMENT,
+      DoctorID INT NOT NULL,
+      ScheduleDate DATE NOT NULL,
+      StartTime TIME NOT NULL,
+      EndTime TIME NOT NULL,
+      IsAvailable TINYINT(1) NOT NULL DEFAULT 1,
+      FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+    )`
+  );
+  console.log('Available_time table ready.');
+
+  // Create appointments table
+  await executeQuery(
+    `CREATE TABLE IF NOT EXISTS appointments (
+      AppointmentID INT PRIMARY KEY AUTO_INCREMENT,
+      PatientID INT NOT NULL,
+      DoctorID INT NOT NULL,
+      AvailableTimeID INT NOT NULL,
+      FOREIGN KEY (PatientID) REFERENCES patients(PatientID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+      FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+      FOREIGN KEY (AvailableTimeID) REFERENCES available_time(AvailableTimeID)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+    )`
+  );
+  console.log('Appointments table ready.');
+};
+
+const initializeDatabase = async (attempt = 1) => {
+  try {
+    await promisePool.query('SELECT 1');
+    await seedDatabase();
+  } catch (err) {
+    if (attempt >= MAX_DB_INIT_RETRIES) {
+      console.error('Error initializing database:', err.message);
+      process.exit(1);
     }
 
-    // Create patients table
-    await executeQuery(
-      `CREATE TABLE IF NOT EXISTS patients (
-        PatientID INT PRIMARY KEY AUTO_INCREMENT,
-        FullName VARCHAR(255) NOT NULL,
-        BirthDate DATE NOT NULL,
-        PhoneNumber VARCHAR(20) NOT NULL,
-        Email VARCHAR(255) NOT NULL UNIQUE,
-        Gender ENUM('Male', 'Female', 'Other') NOT NULL,
-        PasswordHash VARCHAR(255) NOT NULL,
-        Address VARCHAR(255) NOT NULL,
-        DoctorID INT NULL,
-        FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
-          ON UPDATE CASCADE
-          ON DELETE SET NULL
-      )`
+    console.warn(
+      `Database initialization failed (attempt ${attempt}/${MAX_DB_INIT_RETRIES}): ${err.message}. Retrying in ${DB_INIT_DELAY_MS}ms...`
     );
-    console.log('Patients table ready.');
-
-    // Create available_time table
-    await executeQuery(
-      `CREATE TABLE IF NOT EXISTS available_time (
-        AvailableTimeID INT PRIMARY KEY AUTO_INCREMENT,
-        DoctorID INT NOT NULL,
-        ScheduleDate DATE NOT NULL,
-        StartTime TIME NOT NULL,
-        EndTime TIME NOT NULL,
-        IsAvailable TINYINT(1) NOT NULL DEFAULT 1,
-        FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
-          ON UPDATE CASCADE
-          ON DELETE CASCADE
-      )`
-    );
-    console.log('Available_time table ready.');
-
-    // Create appointments table
-    await executeQuery(
-      `CREATE TABLE IF NOT EXISTS appointments (
-        AppointmentID INT PRIMARY KEY AUTO_INCREMENT,
-        PatientID INT NOT NULL,
-        DoctorID INT NOT NULL,
-        AvailableTimeID INT NOT NULL,
-        FOREIGN KEY (PatientID) REFERENCES patients(PatientID)
-          ON UPDATE CASCADE
-          ON DELETE CASCADE,
-        FOREIGN KEY (DoctorID) REFERENCES doctors(DoctorID)
-          ON UPDATE CASCADE
-          ON DELETE CASCADE,
-        FOREIGN KEY (AvailableTimeID) REFERENCES available_time(AvailableTimeID)
-          ON UPDATE CASCADE
-          ON DELETE CASCADE
-      )`
-    );
-    console.log('Appointments table ready.');
-  } catch (err) {
-    console.error('Error initializing database:', err.message);
-    process.exit(1);
+    await wait(DB_INIT_DELAY_MS);
+    return initializeDatabase(attempt + 1);
   }
 };
 

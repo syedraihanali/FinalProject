@@ -16,5 +16,7 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.11.3",
     "sqlite3": "^5.1.7"
-  }
+  },
+  "description": "To start the backend server, in the this directory, you can run:",
+  "author": ""
 }
