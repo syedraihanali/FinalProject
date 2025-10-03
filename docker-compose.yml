@@ -1,12 +1,50 @@
+version: "3.9"
+
 services:
-  app:
-    build: .
-    ports:
-      - "5001:5001"
-      - "4173:4173"
-    env_file:
-      - backend.node/.env
+  db:
+    image: mariadb:11.4
     environment:
-      - FRONTEND_PORT=4173
-      - NODE_ENV=production
-    restart: unless-stopped
+      MARIADB_ROOT_PASSWORD: clinic_root_pass
+      MARIADB_DATABASE: clinic
+      MARIADB_USER: clinic_user
+      MARIADB_PASSWORD: clinic_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "MYSQL_PWD=\"$MARIADB_PASSWORD\" mariadb-admin ping -h 127.0.0.1 -u \"$MARIADB_USER\""
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend.node
+    environment:
+      PORT: 5001
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: clinic_user
+      DB_PASSWORD: clinic_pass
+      DB_NAME: clinic
+      JWT_SECRET: "${JWT_SECRET:-super secret secret token jwt}"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://backend:5001
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  db_data:
