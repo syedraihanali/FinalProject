@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import './PatientProfile.css';
-import { AuthContext } from '../AuthContext'; // Import AuthContext
+import { AuthContext } from '../AuthContext.jsx'; // Import AuthContext
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 function PatientProfile() {
   const { auth } = useContext(AuthContext); // Access auth state
@@ -17,7 +19,7 @@ function PatientProfile() {
     const fetchPatientData = async () => {
       try {
         // Fetch patient details
-        const patientResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/patients/${auth.user.id}`, {
+        const patientResponse = await fetch(`${API_BASE_URL}/api/patients/${auth.user.id}`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`,
           },
@@ -31,7 +33,7 @@ function PatientProfile() {
         setPatient(patientData);
 
         // Fetch upcoming appointments
-        const upcomingResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/patients/${auth.user.id}/upcomingAppointments`, {
+        const upcomingResponse = await fetch(`${API_BASE_URL}/api/patients/${auth.user.id}/upcomingAppointments`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`,
           },
@@ -45,7 +47,7 @@ function PatientProfile() {
         setUpcomingAppointments(upcomingData);
 
         // Fetch appointment history
-        const historyResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/patients/${auth.user.id}/appointmentHistory`, {
+        const historyResponse = await fetch(`${API_BASE_URL}/api/patients/${auth.user.id}/appointmentHistory`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`,
           },

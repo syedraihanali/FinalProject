@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './BookAppointmentPage.css';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../AuthContext'; // Import AuthContext
+import { AuthContext } from '../AuthContext.jsx'; // Import AuthContext
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 function BookAppointmentPage() {
   const { auth } = useContext(AuthContext); // Access auth state
@@ -23,7 +25,7 @@ function BookAppointmentPage() {
     const fetchData = async () => {
       try {
         // Fetch available time slots
-        const timesResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/available_times`, {
+        const timesResponse = await fetch(`${API_URL}/api/available_times`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`,
           },
@@ -41,7 +43,7 @@ function BookAppointmentPage() {
         setUniqueDates(dates);
 
         // Fetch doctors list to get doctor's name
-        const doctorsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/doctors`, {
+        const doctorsResponse = await fetch(`${API_URL}/api/doctors`, {
           headers: {
             'Authorization': `Bearer ${auth.token}`,
           },
@@ -106,7 +108,7 @@ function BookAppointmentPage() {
     setMessage({ type: '', text: '' });
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/book_appointment`, {
+      const response = await fetch(`${API_URL}/api/book_appointment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

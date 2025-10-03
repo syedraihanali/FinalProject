@@ -2,22 +2,22 @@
 
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import RegisterPage from './pages/RegisterPage';
-import PatientProfile from './pages/PatientProfile';
-import SignInPage from './pages/SignInPage';
+import HomePage from './pages/HomePage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
+import PatientProfile from './pages/PatientProfile.jsx';
+import SignInPage from './pages/SignInPage.jsx';
 import './common.css';
-import Header from './components/Header';
-import BookAppointmentPage from './pages/BookAppointmentPage';
-import StaffPortal from './pages/StaffPortal'
-import { AuthContext } from './AuthContext'; // Import AuthContext
-import AboutUs from './pages/AboutUs';
+import Header from './components/Header.jsx';
+import BookAppointmentPage from './pages/BookAppointmentPage.jsx';
+import StaffPortal from './pages/StaffPortal.jsx';
+import { AuthContext } from './AuthContext.jsx'; // Import AuthContext
+import AboutUs from './pages/AboutUs.jsx';
 
 function App() {
   const { auth } = useContext(AuthContext); // Access auth state
 
   return (
-    <Router basename="/Capstone-Project">
+    <Router>
       <div className="App">
         <Header />
         <div className="main-content">
